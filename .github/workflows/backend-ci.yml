@@ -1,0 +1,44 @@
+name: Backend CI
+
+on:
+  push:
+    paths:
+      - "image-proxy/**"
+      - ".github/workflows/backend-*.yml"
+  pull_requests:
+    paths:
+      - "image-proxy/**"
+  workflow_dispatch: {}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    default:
+      run:
+        working-directory: image-proxy
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Read .nvmrc
+        id: nvm
+        run: echo "##[set-output name=NVMRC;]$(cat image-proxy/.nvmrc)"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "${{steps.nvm.outputs.NVMRC}}"
+          cache: "npm"
+          cache-dependency-path: "image-proxy/package-lock.json"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint codebase
+        run: npm run lint --if-present
+
+      - name: Run tests
+        run: npm test --if-present
+
+      - name: Build project
+        run: npm run build --if-present
