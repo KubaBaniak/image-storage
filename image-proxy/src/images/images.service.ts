@@ -4,9 +4,9 @@ import {
   InternalServerErrorException,
   OnModuleInit,
 } from '@nestjs/common';
-import { SupabaseService } from '../supabase/supabase.service';
-import { CreatePresignedUploadRequestDto } from './dto/createPresignedUploadRequest.dto';
+import { SupabaseService } from 'src/supabase/supabase.service';
 import { v4 as uuidv4 } from 'uuid';
+import { CreatePresignedUploadRequestDto } from './dto/createPresignedUploadRequest.dto';
 
 const STORAGE_BUCKET_NAME = 'images';
 
@@ -36,7 +36,7 @@ export class ImagesService implements OnModuleInit {
     this.acceptedMimeTypes = data.allowed_mime_types;
   }
 
-  private isValidFile(metadata: CreatePresignedUploadRequestDto) {
+  isValidFile(metadata: CreatePresignedUploadRequestDto) {
     if (
       this.maxFileSizeBytes !== undefined &&
       metadata.sizeBytes > this.maxFileSizeBytes
@@ -64,10 +64,6 @@ export class ImagesService implements OnModuleInit {
     const imageId = uuidv4();
     const client = this.supabaseService.getClient();
     const ext = MIME_EXT_MAP[metadata.mimeType];
-
-    if (!ext) {
-      throw new BadRequestException('Unsupported mime type');
-    }
 
     const filePath = `${imageId}.${ext}`;
     const imageRecord = {

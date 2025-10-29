@@ -1,6 +1,6 @@
 import { Body, Controller, Post } from '@nestjs/common';
-import { ImagesService } from './images.service';
 import { CreatePresignedUploadRequestDto } from './dto/createPresignedUploadRequest.dto';
+import { ImagesService } from './images.service';
 
 @Controller('images')
 export class ImagesController {
