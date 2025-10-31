@@ -19,7 +19,7 @@ const config: JestConfigWithTsJest = {
     ],
   },
 
-  transformIgnorePatterns: ['/node_modules/(?!(uuid)/)'],
+  transformIgnorePatterns: ['/node_modules/(?!(uuid|@faker-js)/)'],
 
   moduleFileExtensions: ['ts', 'js', 'json'],
 

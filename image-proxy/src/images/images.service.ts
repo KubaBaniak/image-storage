@@ -10,7 +10,6 @@ import { SupabaseService } from 'src/supabase/supabase.service';
 import { v4 as uuidv4 } from 'uuid';
 import { CreatePresignedUploadRequestDto } from './dto/createPresignedUploadRequest.dto';
 import { Tables } from 'src/schema';
-import { PostgrestSingleResponse } from '@supabase/supabase-js';
 import { normalizeMime, equalsMime } from './helpers/helpers';
 
 const STORAGE_BUCKET_NAME = 'images';
@@ -101,32 +100,23 @@ export class ImagesService implements OnModuleInit {
     return { signedUrl: data.signedUrl };
   }
 
-  async validateUploadFile(
-    imageId: string,
-  ): Promise<PostgrestSingleResponse<Tables<'images'>>> {
-    const { data: dbImageRecord, error: dbError } = await this.getDbImageRecord(
-      imageId,
-      'pending',
-    );
-    if (dbError) {
-      throw new InternalServerErrorException(
-        'DB error while fetching image record',
-      );
-    }
+  async validateUploadFile(imageId: string) {
+    const dbImageRecord = await this.getDbImageRecord(imageId, 'pending');
+
     if (!dbImageRecord) {
       throw new NotFoundException('Image not found or not pending');
     }
 
-    const { data: storageImageRecord, error: storageError } =
-      await this.getStorageImageFile(dbImageRecord.storage_path);
+    const storageImageRecord = await this.getStorageImageFile(
+      dbImageRecord.storage_path,
+    );
 
-    if (storageError) {
+    if (!storageImageRecord) {
       throw new UnprocessableEntityException(
         'File not found in storage (upload not completed yet)',
       );
     }
 
-    const client = this.supabaseService.getClient();
     const expSize = dbImageRecord.expected_size_bytes;
     const actSize = storageImageRecord.size;
     const expMime = normalizeMime(dbImageRecord.expected_mime_type);
@@ -143,58 +133,81 @@ export class ImagesService implements OnModuleInit {
             ? 'size_mismatch'
             : 'mime_mismatch';
 
-      const { error: invalidateError } = await client
-        .from('images')
-        .update({
-          status: 'rejected',
-          rejection_reason: reason,
-          validated_at: new Date().toISOString(),
-        })
-        .eq('id', imageId);
-
-      if (invalidateError) {
-        throw new InternalServerErrorException(
-          'Error during invalidation of file',
-        );
-      }
+      await this.invalidateImageDb(imageId, reason);
       throw new UnprocessableEntityException('Uploaded file failed validation');
     }
 
-    try {
-      return client
-        .from('images')
-        .update({
-          status: 'accepted',
-          mime_type: expMime,
-          size_bytes: expSize,
-          validated_at: new Date().toISOString(),
-          rejection_reason: null,
-        })
-        .eq('id', imageId)
-        .select()
-        .single();
-    } catch {
-      throw new InternalServerErrorException('Error during validation of file');
-    }
+    return this.validateImageDb(imageId, { mimeType: expMime, size: expSize });
   }
 
   async getStorageImageFile(storageFilePath: string) {
     const client = this.supabaseService.getClient();
-    return client.storage.from(STORAGE_BUCKET_NAME).info(storageFilePath);
+    const image = await client.storage
+      .from(STORAGE_BUCKET_NAME)
+      .info(storageFilePath);
+    if (!image.data?.contentType || !image.data.size) {
+      throw new InternalServerErrorException(
+        'Could not get storage image data',
+      );
+    }
+    return { size: image.data.size, contentType: image.data.contentType };
   }
 
   async getDbImageRecord(
     imageId: string,
-    status?: 'pending' | 'accepted' | 'rejected',
-  ): Promise<PostgrestSingleResponse<Tables<'images'>>> {
+    status?: 'rejected' | 'pending' | 'accepted',
+  ): Promise<Tables<'images'>> {
     const client = this.supabaseService.getClient();
-
     let query = client.from('images').select('*').eq('id', imageId);
+    if (status) query = query.eq('status', status);
 
-    if (status) {
-      query = query.eq('status', status);
+    const { data, error } = await query.single();
+
+    if (error) throw new InternalServerErrorException('DB error');
+    if (!data) throw new NotFoundException('Image not found');
+
+    return data;
+  }
+
+  async validateImageDb(
+    imageId: string,
+    data: { mimeType: string; size: number },
+  ) {
+    const client = this.supabaseService.getClient();
+    const record = await client
+      .from('images')
+      .update({
+        status: 'accepted',
+        mime_type: data.mimeType,
+        size_bytes: data.size,
+        validated_at: new Date().toISOString(),
+        rejection_reason: null,
+      })
+      .eq('id', imageId)
+      .select()
+      .single();
+
+    if (!record) {
+      throw new InternalServerErrorException('Error during validation of file');
     }
+    return { id: record.data?.id, path: record.data?.storage_path };
+  }
 
-    return query.single();
+  async invalidateImageDb(imageId: string, reason: string) {
+    const client = this.supabaseService.getClient();
+    const { error: invalidateError } = await client
+      .from('images')
+      .update({
+        status: 'rejected',
+        rejection_reason: reason,
+        validated_at: new Date().toISOString(),
+      })
+      .eq('id', imageId);
+
+    if (invalidateError) {
+      throw new InternalServerErrorException(
+        'Error during invalidation of file',
+      );
+    }
   }
 }
