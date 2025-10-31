@@ -30,6 +30,18 @@ export default function createSupabaseServiceMock({
         insert: jest.fn().mockResolvedValue({
           error,
         }),
+        update: jest.fn().mockResolvedValue({
+          error,
+        }),
+        eq: jest.fn().mockResolvedValue({
+          error,
+        }),
+        select: jest.fn().mockResolvedValue({
+          error,
+        }),
+        single: jest.fn().mockResolvedValue({
+          error,
+        }),
         createSignedUrl: jest.fn().mockResolvedValue({
           data: { signedUrl: 'http://example.com/signed-url' },
           error,

@@ -5,7 +5,7 @@ import { Database } from 'src/schema';
 
 @Injectable()
 export class SupabaseService {
-  private readonly client: SupabaseClient;
+  private readonly client: SupabaseClient<Database>;
 
   constructor(private configService: ConfigService) {
     const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
@@ -27,7 +27,7 @@ export class SupabaseService {
     this.client = client;
   }
 
-  getClient() {
+  getClient(): SupabaseClient<Database> {
     return this.client;
   }
 }
