@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, Post } from '@nestjs/common';
 import { CreatePresignedUploadRequestDto } from './dto/createPresignedUploadRequest.dto';
 import { ImagesService } from './images.service';
 
@@ -11,5 +11,11 @@ export class ImagesController {
     @Body() presignRequestData: CreatePresignedUploadRequestDto,
   ) {
     return this.imagesService.generatePresignedUrl(presignRequestData);
+  }
+
+  @HttpCode(200)
+  @Post('verify')
+  verifyImage(@Body('imageId') imageId: string) {
+    return this.imagesService.validateUploadFile(imageId);
   }
 }

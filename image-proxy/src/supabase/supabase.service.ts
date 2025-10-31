@@ -1,6 +1,7 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { Database } from 'src/schema';
 
 @Injectable()
 export class SupabaseService {
@@ -19,7 +20,7 @@ export class SupabaseService {
       );
     }
 
-    const client = createClient(supabaseUrl, supabaseServiceRoleKey, {
+    const client = createClient<Database>(supabaseUrl, supabaseServiceRoleKey, {
       auth: { persistSession: false },
     });
 
