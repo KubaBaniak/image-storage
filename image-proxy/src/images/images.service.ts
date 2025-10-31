@@ -210,4 +210,16 @@ export class ImagesService implements OnModuleInit {
       );
     }
   }
+
+  async getImages() {
+    const client = this.supabaseService.getClient();
+    const { data: files } = await client.storage
+      .from(STORAGE_BUCKET_NAME)
+      .list();
+    const paths = (files ?? []).map((file) => file.name);
+    const { data: signedUrls } = await client.storage
+      .from(STORAGE_BUCKET_NAME)
+      .createSignedUrls(paths, 60 * 60);
+    return signedUrls;
+  }
 }
