@@ -220,6 +220,6 @@ export class ImagesService implements OnModuleInit {
     const { data: signedUrls } = await client.storage
       .from(STORAGE_BUCKET_NAME)
       .createSignedUrls(paths, 60 * 60);
-    return signedUrls;
+    return { items: signedUrls };
   }
 }
