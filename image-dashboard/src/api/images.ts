@@ -35,7 +35,7 @@ export function buildImagesUrl(
     if (v !== undefined && v !== null && String(v).length > 0)
       usp.set(k, String(v));
   const qs = usp.toString();
-  return qs ? `${base}/api/images?${qs}` : `${base}/api/images`;
+  return qs ? `${base}/api/images/preview?${qs}` : `${base}/api/images/preview`;
 }
 
 export async function fetchImages({

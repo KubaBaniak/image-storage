@@ -19,8 +19,8 @@ export class ImagesController {
     return this.imagesService.validateUploadFile(imageId);
   }
 
-  @Get()
+  @Get('preview')
   getImages() {
-    return this.imagesService.getImages();
+    return this.imagesService.getPreviewUrls();
   }
 }

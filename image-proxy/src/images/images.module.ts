@@ -2,9 +2,10 @@ import { Module } from '@nestjs/common';
 import { SupabaseModule } from 'src/supabase/supabase.module';
 import { ImagesController } from './images.controller';
 import { ImagesService } from './images.service';
+import { HttpModule } from '@nestjs/axios';
 
 @Module({
-  imports: [SupabaseModule],
+  imports: [SupabaseModule, HttpModule],
   controllers: [ImagesController],
   providers: [ImagesService],
 })

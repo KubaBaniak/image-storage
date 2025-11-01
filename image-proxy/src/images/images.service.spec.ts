@@ -9,6 +9,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { ImagesService } from './images.service';
 import { faker } from '@faker-js/faker';
 import { Tables } from 'src/schema';
+import { HttpService } from '@nestjs/axios';
 
 describe('ImagesService', () => {
   let imagesService: ImagesService;
@@ -31,6 +32,10 @@ describe('ImagesService', () => {
           useValue: {
             get: jest.fn(),
           },
+        },
+        {
+          provide: HttpService,
+          useValue: {},
         },
       ],
     }).compile();
@@ -62,6 +67,10 @@ describe('ImagesService', () => {
           {
             provide: ConfigService,
             useValue: { get: jest.fn() },
+          },
+          {
+            provide: HttpService,
+            useValue: {},
           },
         ],
       }).compile();
@@ -118,9 +127,8 @@ describe('ImagesService', () => {
 
       const result = await imagesService.generatePresignedUrl(metadata);
 
-      expect(result).toHaveProperty('signedUrl');
-      expect(result.signedUrl).toBeDefined();
-      expect(typeof result.signedUrl).toBe('string');
+      expect(result.originalUrl).toBeDefined();
+      expect(typeof result.originalUrl).toBe('string');
     });
   });
 
@@ -139,6 +147,7 @@ describe('ImagesService', () => {
       } as Tables<'images'>);
 
       jest.spyOn(imagesService, 'getStorageImageFile').mockResolvedValue({
+        name: path,
         size: sizeBytes,
         contentType: mimeType,
       });
@@ -158,11 +167,19 @@ describe('ImagesService', () => {
     describe.each([
       {
         name: 'size mismatch',
-        storage: { size: 2000, contentType: 'image/png' },
+        storage: {
+          name: `${faker.datatype.uuid()}.png`,
+          size: 2000,
+          contentType: 'image/png',
+        },
       },
       {
         name: 'mime mismatch',
-        storage: { size: 1000, contentType: 'image/webp' },
+        storage: {
+          name: `${faker.datatype.uuid()}.webp`,
+          size: 1000,
+          contentType: 'image/webp',
+        },
       },
     ])('validateUploadFile – $name', ({ storage }) => {
       it('rejects with 422', async () => {
