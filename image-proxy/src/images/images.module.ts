@@ -3,9 +3,10 @@ import { SupabaseModule } from 'src/supabase/supabase.module';
 import { ImagesController } from './images.controller';
 import { ImagesService } from './images.service';
 import { HttpModule } from '@nestjs/axios';
+import { QueueModule } from '../queue/queue.module';
 
 @Module({
-  imports: [SupabaseModule, HttpModule],
+  imports: [SupabaseModule, QueueModule, HttpModule],
   controllers: [ImagesController],
   providers: [ImagesService],
 })

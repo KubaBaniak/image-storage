@@ -14,6 +14,8 @@ import { normalizeMime, equalsMime } from './helpers/helpers';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 
 const STORAGE_BUCKET_NAME = 'images';
 const ORIGINALS_FOLDER_NAME = 'originals';
@@ -33,6 +35,7 @@ export class ImagesService implements OnModuleInit {
     private readonly supabaseService: SupabaseService,
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
+    @InjectQueue('image-tagging') private readonly taggingQueue: Queue,
   ) {}
 
   async onModuleInit() {
@@ -164,11 +167,23 @@ export class ImagesService implements OnModuleInit {
       throw new InternalServerErrorException('Thumbnail not available yet');
     }
 
-    return this.validateImageDb(imageId, {
+    const validationResult = await this.validateImageDb(imageId, {
       mimeType: expMime,
       size: expSize,
       previewPath: thumbPath,
     });
+
+    await this.taggingQueue.add(
+      'tag-image',
+      { imageId },
+      {
+        jobId: imageId,
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 3000 },
+      },
+    );
+
+    return validationResult;
   }
 
   async getStorageImageFile(storageFilePath: string) {
@@ -181,6 +196,7 @@ export class ImagesService implements OnModuleInit {
         'Could not get storage image data',
       );
     }
+
     return {
       name: image.data.name,
       size: image.data.size,

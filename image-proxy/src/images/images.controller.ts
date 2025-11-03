@@ -20,7 +20,7 @@ export class ImagesController {
   }
 
   @Get('preview')
-  getImages() {
+  getPreviewUrls() {
     return this.imagesService.getPreviewUrls();
   }
 }
