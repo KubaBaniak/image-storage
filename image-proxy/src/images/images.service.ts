@@ -11,7 +11,12 @@ import { SupabaseService } from 'src/supabase/supabase.service';
 import { v4 as uuidv4 } from 'uuid';
 import { CreatePresignedUploadRequestDto } from './dto/createPresignedUploadRequest.dto';
 import { Tables } from 'src/schema';
-import { normalizeMime, equalsMime } from './helpers/helpers';
+import {
+  normalizeMime,
+  equalsMime,
+  decodeCursor,
+  encodeCursor,
+} from './helpers/helpers';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
@@ -235,6 +240,7 @@ export class ImagesService implements OnModuleInit {
         preview_path: data.previewPath,
         size_bytes: data.size,
         validated_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
         rejection_reason: null,
       })
       .eq('id', imageId)
@@ -254,6 +260,7 @@ export class ImagesService implements OnModuleInit {
       .update({
         status: 'rejected',
         rejection_reason: reason,
+        updated_at: new Date().toISOString(),
       })
       .eq('id', imageId);
 
@@ -264,21 +271,59 @@ export class ImagesService implements OnModuleInit {
     }
   }
 
-  async getPreviewUrls() {
+  async getPreviewUrls({ limit, after }: { limit: number; after?: string }) {
     const client = this.supabaseService.getClient();
-    const { data } = await client
+
+    let query = client
       .from('images')
-      .select('preview_path')
-      .eq('status', 'accepted');
+      .select('id, preview_path, created_at')
+      .eq('status', 'accepted')
+      .not('preview_path', 'is', null)
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false });
 
-    const paths = (data ?? [])
-      .map((img) => img.preview_path)
-      .filter((path): path is string => !!path);
+    if (after) {
+      const { createdAt, id } = decodeCursor(after);
+      query = query.or(
+        `created_at.lt.${createdAt},and(created_at.eq.${createdAt},id.lt.${id})`,
+      );
+    }
 
-    const { data: signedUrls } = await client.storage
+    query = query.limit(limit + 1);
+
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+
+    const rows = data ?? [];
+    const hasMore = rows.length > limit;
+    const page = hasMore ? rows.slice(0, limit) : rows;
+
+    const last = page[page.length - 1];
+    const lastCreatedAt = last?.created_at;
+    const lastId = last?.id;
+
+    const nextCursor =
+      hasMore && lastCreatedAt
+        ? encodeCursor({ createdAt: lastCreatedAt, id: lastId })
+        : null;
+
+    const paths = page.map((r) => r.preview_path as string);
+
+    const { data: signed, error: signErr } = await client.storage
       .from(STORAGE_BUCKET_NAME)
       .createSignedUrls(paths, 60 * 60);
-    return { items: signedUrls };
+
+    if (signErr) throw new Error(signErr.message);
+
+    const items = page.map((r, i) => ({
+      id: r.id,
+      createdAt: r.created_at,
+      previewPath: r.preview_path,
+      signedUrl: signed?.[i]?.signedUrl ?? null,
+      signError: signed?.[i]?.error ?? null,
+    }));
+
+    return { items, nextCursor, limit };
   }
 
   toThumbPath(name: string) {

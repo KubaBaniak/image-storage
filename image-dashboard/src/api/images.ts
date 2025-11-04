@@ -1,13 +1,4 @@
-export type ImageItem = {
-  error: string | null;
-  path: string;
-  signedUrl: string;
-};
-
-export type FetchResponse = {
-  items: ImageItem[];
-  nextCursor?: string | null;
-};
+import type { BackendItem, FetchResponse, ImageItem } from "./types";
 
 function resolveApiBase(envValue?: unknown): string {
   const env = typeof envValue === "string" ? envValue : undefined;
@@ -29,34 +20,45 @@ export function buildImagesUrl(
 ): string {
   const base = API_BASE ? API_BASE.replace(/\/+$/, "") : "";
   const usp = new URLSearchParams();
-  for (const [k, v] of Object.entries(params))
+  for (const [k, v] of Object.entries(params)) {
     if (v !== undefined && v !== null && String(v).length > 0)
       usp.set(k, String(v));
+  }
   const qs = usp.toString();
   return qs ? `${base}/api/images/preview?${qs}` : `${base}/api/images/preview`;
 }
 
 export async function fetchImages({
   q = "",
-  cursor,
+  after,
   limit = 30,
 }: {
   q?: string;
-  cursor?: string | null;
+  after?: string | null;
   limit?: number;
 }): Promise<FetchResponse> {
-  const url = buildImagesUrl({ q, cursor: cursor ?? undefined, limit });
+  const url = buildImagesUrl({ q, after: after ?? undefined, limit });
 
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to fetch: ${res.status}`);
-  const data = (await res.json()) as FetchResponse;
-  console.log(data);
-  const items = (data.items || []).map((it) => ({
-    ...it,
-    path: it.path,
-    thumbUrl: it.signedUrl,
+
+  const payload = (await res.json()) as {
+    items: BackendItem[];
+    nextCursor?: string | null;
+  };
+
+  const items: ImageItem[] = (payload.items ?? []).map((it) => ({
+    id: it.id,
+    path: it.previewPath,
+    signedUrl: it.signedUrl ?? null,
+    error:
+      typeof it.signError === "string"
+        ? it.signError
+        : (it.signError?.message ?? null),
+    createdAt: it.createdAt ?? undefined,
   }));
-  return { items, nextCursor: data.nextCursor ?? null };
+
+  return { items, nextCursor: payload.nextCursor ?? null };
 }
 
 export async function getOriginalSignedUrl(

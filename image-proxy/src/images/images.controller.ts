@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { CreatePresignedUploadRequestDto } from './dto/createPresignedUploadRequest.dto';
 import { ImagesService } from './images.service';
+import { GetPreviewUrlsDto } from './dto/getPreviewUrls.dto';
 
 @Controller('images')
 export class ImagesController {
@@ -28,8 +29,8 @@ export class ImagesController {
   }
 
   @Get('preview')
-  getPreviewUrls() {
-    return this.imagesService.getPreviewUrls();
+  getPreviewUrls(@Query() query: GetPreviewUrlsDto) {
+    return this.imagesService.getPreviewUrls(query);
   }
 
   @Get('original')

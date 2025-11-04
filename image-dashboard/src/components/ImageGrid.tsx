@@ -1,4 +1,4 @@
-import type { ImageItem } from "../api/images";
+import type { ImageItem } from "../api/types";
 
 export function ImageGrid({
   items,
@@ -10,32 +10,35 @@ export function ImageGrid({
   return (
     <div className="mx-auto max-w-7xl px-4 py-6">
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-        {items.map((img, i) => (
-          <div
-            key={img.path}
-            className="group relative overflow-hidden rounded-xl border border-neutral-200/60 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900"
-            title={img.path.split("/").pop() ?? img.signedUrl}
-          >
-            <button
-              onClick={() => onOpen(i)}
-              className="block w-full text-left"
-              aria-label={`Open preview ${img.path}`}
-            >
-              <img
-                src={img.signedUrl}
-                loading="lazy"
-                className="aspect-4/3 w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-              />
-            </button>
+        {items.map(
+          (img, i) =>
+            img.signedUrl && (
+              <div
+                key={img.path}
+                className="group relative overflow-hidden rounded-xl border border-neutral-200/60 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900"
+                title={img.path.split("/").pop() ?? img.id}
+              >
+                <button
+                  onClick={() => onOpen(i)}
+                  className="block w-full text-left"
+                  aria-label={`Open preview ${img.path}`}
+                >
+                  <img
+                    src={img.signedUrl}
+                    loading="lazy"
+                    className="aspect-4/3 w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                  />
+                </button>
 
-            {/* Bottom gradient/info */}
-            <div className="absolute inset-x-0 bottom-0 p-2 bg-linear-to-t from-black/50 to-transparent text-white text-xs flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <span className="truncate">
-                {img.path.split("/").pop() || "Bez tytułu"}
-              </span>
-            </div>
-          </div>
-        ))}
+                {/* Bottom gradient/info */}
+                <div className="absolute inset-x-0 bottom-0 p-2 bg-linear-to-t from-black/50 to-transparent text-white text-xs flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="truncate">
+                    {img.path.split("/").pop() || "Bez tytułu"}
+                  </span>
+                </div>
+              </div>
+            ),
+        )}
       </div>
     </div>
   );

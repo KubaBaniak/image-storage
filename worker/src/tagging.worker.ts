@@ -62,7 +62,7 @@ async function processJob(job: Job) {
 
   const { error: updErr } = await supabase
     .from(TABLE_NAME)
-    .update({ description: imageCaption })
+    .update({ description: imageCaption, updated_at: new Date().toISOString() })
     .eq("id", imageId);
   if (updErr) throw updErr;
 }

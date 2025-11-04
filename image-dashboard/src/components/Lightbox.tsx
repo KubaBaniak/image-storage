@@ -10,8 +10,8 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { useKeyDown } from "../hooks/useKeyDown";
 import { clsx } from "../utils/clsx";
-import type { ImageItem } from "../api/images";
 import { getOriginalSignedUrl } from "../api/images";
+import type { ImageItem } from "../api/types";
 
 export function Lightbox({
   items,
@@ -31,7 +31,8 @@ export function Lightbox({
   const canNext = index < items.length - 1;
 
   // displayUrl starts as preview (fast), then we upgrade to original
-  const previewUrl = item.signedUrl;
+  const previewUrl =
+    item.signedUrl || "https://demofree.sirv.com/nope-not-here.jpg?w=150";
   const [displayUrl, setDisplayUrl] = useState(previewUrl);
   const [loadingOriginal, setLoadingOriginal] = useState(false);
 

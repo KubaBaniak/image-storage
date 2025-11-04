@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { fetchImages, type ImageItem } from "./api/images";
+import { fetchImages } from "./api/images";
 import { Header } from "./components/Header";
 import { SearchBar } from "./components/SearchBar";
 import { GridSkeleton } from "./components/GridSkeleton";
@@ -9,6 +9,7 @@ import { LoadMoreSentinel } from "./components/LoadMoreSentinel";
 import { UploadModal } from "./components/UploadModal";
 import { useDebounced } from "./hooks/useDebounced";
 import { Loader2 } from "lucide-react";
+import type { ImageItem } from "./api/types";
 
 export default function App() {
   const [query, setQuery] = useState("");
@@ -32,7 +33,7 @@ export default function App() {
     try {
       const res = await fetchImages({
         q: debounced,
-        cursor: mode === "more" ? cursor : null,
+        after: mode === "more" ? cursor : null,
       });
       setItems((prev) =>
         mode === "reset" ? res.items : [...prev, ...res.items],
