@@ -1,4 +1,12 @@
-import { Body, Controller, Get, HttpCode, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { CreatePresignedUploadRequestDto } from './dto/createPresignedUploadRequest.dto';
 import { ImagesService } from './images.service';
 
@@ -22,5 +30,15 @@ export class ImagesController {
   @Get('preview')
   getPreviewUrls() {
     return this.imagesService.getPreviewUrls();
+  }
+
+  @Get('original')
+  getOriginalImageUrl(@Query('filename') filename: string) {
+    return this.imagesService.getOriginalImageUrl(filename);
+  }
+
+  @Delete('')
+  deleteImage(@Body('imageId') imageId: string) {
+    return this.imagesService.deleteImage(imageId);
   }
 }

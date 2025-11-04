@@ -1,4 +1,12 @@
-export function Header({ total }: { total: number | null }) {
+import { Upload } from "lucide-react";
+
+export function Header({
+  total,
+  onOpenUpload,
+}: {
+  total: number | null;
+  onOpenUpload: () => void;
+}) {
   return (
     <header className="sticky top-0 z-20 backdrop-blur bg-white/70 dark:bg-neutral-900/60 border-b border-neutral-200 dark:border-neutral-800">
       <div className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
@@ -13,8 +21,16 @@ export function Header({ total }: { total: number | null }) {
             </p>
           </div>
         </div>
-        <div className="text-xs text-neutral-500">
-          {total !== null ? `${total} zdjęć` : ""}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onOpenUpload}
+            className="inline-flex items-center gap-2 rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2 text-sm hover:bg-neutral-100/60 dark:hover:bg-neutral-800/50"
+          >
+            <Upload className="h-4 w-4" /> Prześlij
+          </button>
+          <div className="text-xs text-neutral-500 hidden sm:block">
+            {total !== null ? `${total} zdjęć` : ""}
+          </div>
         </div>
       </div>
     </header>

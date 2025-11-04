@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { fetchImages, type ImageItem } from "./api/images";
 import { Header } from "./components/Header";
 import { SearchBar } from "./components/SearchBar";
@@ -6,7 +6,9 @@ import { GridSkeleton } from "./components/GridSkeleton";
 import { ImageGrid } from "./components/ImageGrid";
 import { Lightbox } from "./components/Lightbox";
 import { LoadMoreSentinel } from "./components/LoadMoreSentinel";
+import { UploadModal } from "./components/UploadModal";
 import { useDebounced } from "./hooks/useDebounced";
+import { Loader2 } from "lucide-react";
 
 export default function App() {
   const [query, setQuery] = useState("");
@@ -17,10 +19,11 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [uploadOpen, setUploadOpen] = useState(false);
 
   const total = useMemo(
     () => (initialized ? items.length : null),
-    [initialized, items],
+    [initialized, items.length],
   );
 
   const runFetch = async (mode: "reset" | "more") => {
@@ -43,13 +46,15 @@ export default function App() {
 
   useEffect(() => {
     runFetch("reset");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debounced]);
 
   const canLoadMore = !!cursor;
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100">
-      <Header total={total} />
+      <Header total={total} onOpenUpload={() => setUploadOpen(true)} />
+
       <SearchBar
         value={query}
         onChange={setQuery}
@@ -57,6 +62,7 @@ export default function App() {
       />
 
       {!initialized && <GridSkeleton />}
+
       {initialized && (
         <>
           {items.length === 0 ? (
@@ -67,11 +73,34 @@ export default function App() {
           ) : (
             <ImageGrid items={items} onOpen={(i) => setLightboxIndex(i)} />
           )}
-          {canLoadMore && (
-            <div className="mx-auto max-w-7xl px-4 pb-12">
-              <LoadMoreSentinel onVisible={() => runFetch("more")} />
-            </div>
-          )}
+
+          <div className="mx-auto max-w-7xl px-4 pb-12">
+            {canLoadMore ? (
+              <>
+                <button
+                  onClick={() => runFetch("more")}
+                  disabled={loading}
+                  className="mx-auto block rounded-xl border border-neutral-200 dark:border-neutral-800 px-4 py-2 text-sm hover:bg-neutral-100/60 dark:hover:bg-neutral-800/50 disabled:opacity-50"
+                >
+                  {loading ? (
+                    <span className="inline-flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Wczytywanie…
+                    </span>
+                  ) : (
+                    "Wczytaj więcej"
+                  )}
+                </button>
+                <LoadMoreSentinel onVisible={() => runFetch("more")} />
+              </>
+            ) : (
+              initialized &&
+              items.length > 0 && (
+                <div className="text-center text-xs text-neutral-500">
+                  To już wszystkie wyniki
+                </div>
+              )
+            )}
+          </div>
         </>
       )}
 
@@ -80,11 +109,17 @@ export default function App() {
           items={items}
           index={lightboxIndex}
           onClose={() => setLightboxIndex(null)}
-          onNavigate={(n) =>
-            setLightboxIndex(Math.max(0, Math.min(items.length - 1, n)))
+          onNavigate={(next) =>
+            setLightboxIndex(Math.max(0, Math.min(items.length - 1, next)))
           }
         />
       )}
+
+      <UploadModal
+        open={uploadOpen}
+        onClose={() => setUploadOpen(false)}
+        onSuccess={() => runFetch("reset")}
+      />
     </div>
   );
 }

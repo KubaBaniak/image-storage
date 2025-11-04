@@ -1,9 +1,7 @@
 export type ImageItem = {
+  error: string | null;
   path: string;
   signedUrl: string;
-  thumbUrl?: string;
-  title?: string;
-  tags?: string[];
 };
 
 export type FetchResponse = {
@@ -56,7 +54,22 @@ export async function fetchImages({
   const items = (data.items || []).map((it) => ({
     ...it,
     path: it.path,
-    thumbUrl: it.thumbUrl || it.signedUrl,
+    thumbUrl: it.signedUrl,
   }));
   return { items, nextCursor: data.nextCursor ?? null };
+}
+
+export async function getOriginalSignedUrl(
+  originalImageFilename: string,
+): Promise<string> {
+  const base = API_BASE ? API_BASE.replace(/\/+$/, "") : "";
+  const url = `${base}/api/images/original?filename=${encodeURIComponent(originalImageFilename)}`;
+
+  console.log(url);
+  const res = await fetch(url);
+  if (!res.ok)
+    throw new Error(`Failed to get original signed URL: ${res.status}`);
+  const data = (await res.json()) as { signedUrl: string };
+  if (!data?.signedUrl) throw new Error("Missing signedUrl in response");
+  return data.signedUrl;
 }

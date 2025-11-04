@@ -1,4 +1,5 @@
 import {
+  BadGatewayException,
   BadRequestException,
   Injectable,
   InternalServerErrorException,
@@ -111,6 +112,7 @@ export class ImagesService implements OnModuleInit {
     }
 
     return {
+      imageId,
       originalUrl: data.signedUrl,
     };
   }
@@ -323,5 +325,47 @@ export class ImagesService implements OnModuleInit {
       delay = Math.min(delay * 2, 1500);
     }
     return false;
+  }
+
+  async deleteImage(imageId: string) {
+    const client = this.supabaseService.getClient();
+
+    const dbImageRecord = await this.getDbImageRecord(imageId);
+
+    const toDelete: string[] = [];
+    if (dbImageRecord.storage_path) toDelete.push(dbImageRecord.storage_path);
+    if (dbImageRecord.preview_path) toDelete.push(dbImageRecord.preview_path);
+
+    const { error: storageErr } = await client.storage
+      .from(STORAGE_BUCKET_NAME)
+      .remove(toDelete);
+
+    if (storageErr)
+      throw new BadRequestException(
+        `Storage delete failed - ${storageErr.message}`,
+      );
+
+    const { error: delErr } = await client
+      .from('images')
+      .delete()
+      .eq('id', imageId);
+
+    if (delErr) {
+      console.error(`Failed to delete images: ${toDelete.join(', ')}`);
+      throw new BadRequestException('DB delete failed');
+    }
+  }
+
+  async getOriginalImageUrl(filename: string) {
+    const client = this.supabaseService.getClient();
+
+    const { data, error } = await client.storage
+      .from(STORAGE_BUCKET_NAME)
+      .createSignedUrl(`originals/${filename}`, 60 * 60);
+
+    if (error)
+      throw new BadGatewayException('Could not get URL of original image');
+
+    return { signedUrl: data.signedUrl };
   }
 }
