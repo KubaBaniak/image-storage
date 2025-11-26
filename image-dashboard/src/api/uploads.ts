@@ -7,7 +7,6 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
 
 function buildUrl(path: string) {
   const base = API_BASE ? API_BASE.replace(/\/+$/, "") : "";
-  console.log(base);
   return `${base}${path.startsWith("/") ? "" : "/"}${path}`;
 }
 
@@ -20,7 +19,6 @@ export async function requestPresignedUpload(meta: {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(meta),
   });
-  console.log(res);
   if (!res.ok) throw new Error(`Presign failed: ${res.status}`);
   return (await res.json()) as PresignResponse;
 }

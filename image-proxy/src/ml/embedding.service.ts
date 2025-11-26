@@ -12,7 +12,7 @@ export class EmbeddingService {
   private model = 'sentence-transformers/all-MiniLM-L6-v2';
   private provider: InferenceProvider = 'hf-inference';
 
-  async embedCaption(caption: string): Promise<number[]> {
+  async embedText(caption: string): Promise<number[]> {
     try {
       const result = await this.client.featureExtraction({
         model: this.model,

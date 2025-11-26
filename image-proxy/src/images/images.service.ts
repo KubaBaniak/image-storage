@@ -25,6 +25,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { QdrantClient } from '@qdrant/js-client-rest';
 import { EmbeddingService } from 'src/ml/embedding.service';
+import { GetPreviewUrlsDto } from './dto/getPreviewUrls.dto';
 
 const STORAGE_BUCKET_NAME = 'images';
 const ORIGINALS_FOLDER_NAME = 'originals';
@@ -304,7 +305,7 @@ export class ImagesService implements OnModuleInit {
     }
   }
 
-  async getPreviewUrls({ limit, after }: { limit: number; after?: string }) {
+  async getPreviewUrls({ limit, after, q }: GetPreviewUrlsDto) {
     const client = this.supabaseService.getClient();
 
     let query = client
@@ -356,7 +357,14 @@ export class ImagesService implements OnModuleInit {
       signError: signed?.[i]?.error ?? null,
     }));
 
-    return { items, nextCursor, limit };
+    if (!q) {
+      return { items, nextCursor, limit };
+    }
+    return {
+      items: await this.filterImagesByCaption(q, items, limit),
+      nextCursor,
+      limit,
+    };
   }
 
   toThumbPath(name: string) {
@@ -455,9 +463,7 @@ export class ImagesService implements OnModuleInit {
       );
     }
 
-    const embeddings = await this.embeddingService.embedCaption(
-      image.description,
-    );
+    const embeddings = await this.embeddingService.embedText(image.description);
     return this.vectorClient.upsert(this.collectionName, {
       wait: true,
       points: [
@@ -468,5 +474,31 @@ export class ImagesService implements OnModuleInit {
         },
       ],
     });
+  }
+
+  async filterImagesByCaption(
+    searchText: string,
+    images: {
+      id: string;
+      createdAt: string | null;
+      previewPath: string | null;
+      signedUrl: string | null;
+      signError: string | null;
+    }[],
+    limit: number,
+  ) {
+    const embededSearchText = await this.embeddingService.embedText(searchText);
+
+    const searchResults = await this.vectorClient.query(this.collectionName, {
+      query: embededSearchText,
+      limit,
+    });
+
+    const imageById = new Map(images.map((img) => [img.id, img]));
+
+    return searchResults.points
+      .filter((point) => point.score > 0.15)
+      .map((point) => imageById.get(point.id as string))
+      .filter((img): img is (typeof images)[number] => !!img);
   }
 }

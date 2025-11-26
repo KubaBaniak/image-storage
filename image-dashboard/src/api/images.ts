@@ -67,7 +67,6 @@ export async function getOriginalSignedUrl(
   const base = API_BASE ? API_BASE.replace(/\/+$/, "") : "";
   const url = `${base}/api/images/original?filename=${encodeURIComponent(originalImageFilename)}`;
 
-  console.log(url);
   const res = await fetch(url);
   if (!res.ok)
     throw new Error(`Failed to get original signed URL: ${res.status}`);

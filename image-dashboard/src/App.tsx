@@ -13,7 +13,7 @@ import type { ImageItem } from "./api/types";
 
 export default function App() {
   const [query, setQuery] = useState("");
-  const debounced = useDebounced(query, 350);
+  const debounced = useDebounced(query, 200);
 
   const [items, setItems] = useState<ImageItem[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);

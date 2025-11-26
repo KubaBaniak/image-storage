@@ -2,6 +2,7 @@ import "dotenv/config";
 import { createClient } from "@supabase/supabase-js";
 import { Job, Worker } from "bullmq";
 import { ImageToTextModel } from "./tagging-model";
+import axios from "axios";
 
 const BUCKET_NAME = "images";
 const TABLE_NAME = "images";
@@ -65,6 +66,16 @@ async function processJob(job: Job) {
     .update({ description: imageCaption, updated_at: new Date().toISOString() })
     .eq("id", imageId);
   if (updErr) throw updErr;
+
+  await axios.post(
+    `http://localhost:3000/api/images/${imageId}/embed`,
+    {},
+    {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    },
+  );
 }
 
 const worker = new Worker("image-tagging", processJob, {

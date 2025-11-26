@@ -1,5 +1,12 @@
 import { Transform } from 'class-transformer';
-import { IsBase64, IsInt, IsOptional, Max, Min } from 'class-validator';
+import {
+  IsBase64,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class GetPreviewUrlsDto {
   @IsOptional()
@@ -12,4 +19,8 @@ export class GetPreviewUrlsDto {
   @IsBase64()
   @IsOptional()
   after?: string;
+
+  @IsOptional()
+  @IsString()
+  q?: string;
 }
