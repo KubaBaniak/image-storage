@@ -1,6 +1,7 @@
 import {
   BadGatewayException,
   BadRequestException,
+  Inject,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -22,6 +23,8 @@ import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import { QdrantClient } from '@qdrant/js-client-rest';
+import { EmbeddingService } from 'src/ml/embedding.service';
 
 const STORAGE_BUCKET_NAME = 'images';
 const ORIGINALS_FOLDER_NAME = 'originals';
@@ -36,15 +39,25 @@ const MIME_EXT_MAP: Record<string, string> = {
 export class ImagesService implements OnModuleInit {
   private maxFileSizeBytes?: number;
   private acceptedMimeTypes?: string[];
+  private collectionName = 'thumbnail-images';
 
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
+    private readonly embeddingService: EmbeddingService,
     @InjectQueue('image-tagging') private readonly taggingQueue: Queue,
+    @Inject('QdrantClient') private readonly vectorClient: QdrantClient,
   ) {}
 
   async onModuleInit() {
+    await Promise.all([
+      this.initializeBucket(),
+      this.initializeVectorStorageClient(),
+    ]);
+  }
+
+  private async initializeBucket() {
     const { data, error } = await this.supabaseService
       .getClient()
       .storage.getBucket(STORAGE_BUCKET_NAME);
@@ -55,6 +68,26 @@ export class ImagesService implements OnModuleInit {
 
     this.maxFileSizeBytes = data.file_size_limit;
     this.acceptedMimeTypes = data.allowed_mime_types;
+  }
+
+  private async initializeVectorStorageClient() {
+    const { exists } = await this.vectorClient.collectionExists(
+      this.collectionName,
+    );
+
+    if (exists) {
+      console.info(
+        'Default Qdrant collection detected - skipping initialization',
+      );
+      return;
+    }
+
+    await this.vectorClient.createCollection(this.collectionName, {
+      timeout: 10000,
+      vectors: { size: 384, distance: 'Cosine' },
+    });
+
+    console.info('Default Qdrant collection created');
   }
 
   isValidFile(metadata: CreatePresignedUploadRequestDto) {
@@ -412,5 +445,28 @@ export class ImagesService implements OnModuleInit {
       throw new BadGatewayException('Could not get URL of original image');
 
     return { signedUrl: data.signedUrl };
+  }
+
+  async setEmbeddings(id: string) {
+    const image = await this.getDbImageRecord(id);
+    if (!image.description) {
+      throw new BadRequestException(
+        'Could not genereate embeddings due to missing image description',
+      );
+    }
+
+    const embeddings = await this.embeddingService.embedCaption(
+      image.description,
+    );
+    return this.vectorClient.upsert(this.collectionName, {
+      wait: true,
+      points: [
+        {
+          id,
+          vector: embeddings,
+          payload: { caption: image.description },
+        },
+      ],
+    });
   }
 }

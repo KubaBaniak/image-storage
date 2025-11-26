@@ -4,6 +4,8 @@ import {
   Delete,
   Get,
   HttpCode,
+  Param,
+  Patch,
   Post,
   Query,
 } from '@nestjs/common';
@@ -26,6 +28,12 @@ export class ImagesController {
   @Post('verify')
   verifyImage(@Body('imageId') imageId: string) {
     return this.imagesService.validateUploadFile(imageId);
+  }
+
+  @HttpCode(201)
+  @Patch(':id/embed')
+  addImageEmbeddings(@Param('id') id: string) {
+    return this.imagesService.setEmbeddings(id);
   }
 
   @Get('preview')

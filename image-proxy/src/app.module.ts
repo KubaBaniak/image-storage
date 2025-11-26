@@ -5,6 +5,7 @@ import { ImagesModule } from './images/images.module';
 import { ConfigModule } from '@nestjs/config';
 import { SupabaseModule } from './supabase/supabase.module';
 import { QueueModule } from './queue/queue.module';
+import { MlModule } from './ml/ml.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { QueueModule } from './queue/queue.module';
     ConfigModule.forRoot({ isGlobal: true }),
     SupabaseModule,
     QueueModule,
+    MlModule,
   ],
   controllers: [AppController],
   providers: [AppService],
